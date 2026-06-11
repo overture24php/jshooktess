@@ -18,24 +18,24 @@ if [ ! -d "$NDK" ]; then
     exit 1
 fi
 
-# Get Dobby
+# Get Dobby (prebuilt)
+DOBBY_REPO="https://github.com/3equals3/DobbyHook"
 if [ ! -d "$DIR/deps/Dobby" ]; then
-    echo "==> Fetching Dobby..."
-    git clone --depth 1 https://github.com/jmpews/Dobby.git "$DIR/deps/Dobby"
-fi
+    echo "==> Downloading prebuilt Dobby..."
+    mkdir -p "$DIR/deps/Dobby/include" "$DIR/deps/Dobby/lib"
 
-# Build Dobby
-echo "==> Building Dobby..."
-cd "$DIR/deps/Dobby"
-mkdir -p build && cd build
-cmake .. \
-    -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
-    -DANDROID_ABI="$ABI" \
-    -DANDROID_PLATFORM="$API" \
-    -DDOBBY_GENERATE_SHARED=ON \
-    -DDOBBY_GENERATE_OBJECT=OFF \
-    -DCMAKE_BUILD_TYPE=Release
-cmake --build . --target dobby -j$(nproc)
+    # Map ABI name
+    case "$ABI" in
+        arm64-v8a) DOBBY_ABI="arm64-v8a" ;;
+        armeabi-v7a) DOBBY_ABI="armeabi-v7a" ;;
+        *) echo "Unknown ABI: $ABI"; exit 1 ;;
+    esac
+
+    curl -sL -o "$DIR/deps/Dobby/include/dobby.h" \
+        "$DOBBY_REPO/raw/main/Dobby.h"
+    curl -sL -o "$DIR/deps/Dobby/lib/libdobby.a" \
+        "$DOBBY_REPO/raw/main/$DOBBY_ABI/libdobby.a"
+fi
 
 # Build JSHook
 echo "==> Building JSHook..."
@@ -45,7 +45,8 @@ cmake .. \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI="$ABI" \
     -DANDROID_PLATFORM="$API" \
-    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_BUILD_TYPE=Release \
+    -DDOBBY_USE_PREBUILT=ON
 cmake --build . -j$(nproc)
 
 echo "==> Build complete!"

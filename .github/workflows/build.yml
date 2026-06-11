@@ -13,12 +13,15 @@ jobs:
     strategy:
       matrix:
         abi: [ arm64-v8a, armeabi-v7a ]
+        include:
+          - abi: arm64-v8a
+            dobby_abi: arm64-v8a
+          - abi: armeabi-v7a
+            dobby_abi: armeabi-v7a
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -26,18 +29,15 @@ jobs:
           ndk-version: r26d
           add-to-path: false
 
-      - name: Build Dobby
+      - name: Download prebuilt Dobby
         run: |
-          git clone --depth 1 https://github.com/jmpews/Dobby.git deps/Dobby
-          cd deps/Dobby
-          mkdir -p build && cd build
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.abi }} \
-            -DANDROID_PLATFORM=android-21 \
-            -DDOBBY_GENERATE_SHARED=ON \
-            -DDOBBY_GENERATE_OBJECT=OFF
-          cmake --build . --target dobby -j$(nproc)
+          mkdir -p deps/Dobby/include deps/Dobby/lib
+          # Download Dobby.h header
+          curl -sL -o deps/Dobby/include/dobby.h \
+            https://raw.githubusercontent.com/3equals3/DobbyHook/main/Dobby.h
+          # Download prebuilt static lib
+          curl -sL -o deps/Dobby/lib/libdobby.a \
+            "https://github.com/3equals3/DobbyHook/raw/main/${{ matrix.dobby_abi }}/libdobby.a"
 
       - name: Configure JSHook
         run: |
@@ -45,7 +45,8 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.abi }} \
             -DANDROID_PLATFORM=android-21 \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DDOBBY_USE_PREBUILT=ON
 
       - name: Build JSHook
         run: |

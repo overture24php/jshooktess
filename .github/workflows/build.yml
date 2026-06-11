@@ -1,0 +1,59 @@
+name: Build JSHook
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        abi: [ arm64-v8a, armeabi-v7a ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          add-to-path: false
+
+      - name: Build Dobby
+        run: |
+          git clone --depth 1 https://github.com/jmpews/Dobby.git deps/Dobby
+          cd deps/Dobby
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DANDROID_PLATFORM=android-21 \
+            -DDOBBY_GENERATE_SHARED=ON \
+            -DDOBBY_GENERATE_OBJECT=OFF
+          cmake --build . --target dobby -j$(nproc)
+
+      - name: Configure JSHook
+        run: |
+          cmake -B build \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DANDROID_PLATFORM=android-21 \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build JSHook
+        run: |
+          cmake --build build -j$(nproc)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libjshook-${{ matrix.abi }}
+          path: build/libjshook.so
+          if-no-files-found: error

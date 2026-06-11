@@ -9,6 +9,7 @@
 #include "dobby.h"
 #include <stdio.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 /* forward declarations from xxtea_hook.c */
 int jshook_hook_xxtea(void);
@@ -119,7 +120,8 @@ __attribute__((constructor)) static void jshook_init(void) {
 }
 
 /* JNI_OnLoad for compatibility with injectors that use JNI */
-jint JNI_OnLoad(void* vm, void* reserved) {
+int JNI_OnLoad(void* vm, void* reserved) {
     /* init already runs via constructor, this is just for compat */
+    (void)vm; (void)reserved;
     return 0x00010006; /* JNI_VERSION_1_6 */
 }

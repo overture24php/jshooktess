@@ -59,7 +59,7 @@ if(DOBBY_LIBRARY AND EXISTS "${DOBBY_LIBRARY}")
     target_link_libraries(jshook ${DOBBY_LIBRARY} dl)
 endif()
 
-target_link_libraries(jshook dl log)
+target_link_libraries(jshook dl log c++)
 
 if(ANDROID)
     set_target_properties(jshook PROPERTIES
